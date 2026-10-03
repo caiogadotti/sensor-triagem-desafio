@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import streamlit as st
+
+import sobre
 from sklearn.metrics import accuracy_score
 from sklearn.tree import export_text, plot_tree
 
@@ -27,10 +29,14 @@ from src.model import MAX_DEPTH_PADRAO, comparar_profundidades, treinar
 
 st.set_page_config(
     page_title="Sensor de Triagem",
-    page_icon="♻️",
+    page_icon=os.path.join(os.path.dirname(os.path.abspath(__file__)), "icone.png"),
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+
+ESCOPO = ('Uma esteira de reciclagem precisa separar papel, plástico e metal sem câmera, só com sensores baratos. O desafio foi criar um dataset próprio com quatro leituras plausíveis de sensor e treinar uma árvore de decisão que diga o material e por quê. Dá para arrastar um item até o sensor e ver a classificação na hora.', ['Dataset autoral (dataset_desafio.csv) com peso, densidade, condutividade e opacidade', 'Três classes: papel, plástico e metal', 'Árvore de decisão com profundidade máxima 3 e o caminho de decisão explicado', 'Arrastar e soltar itens no sensor, e modo manual com os quatro controles'], ['Leituras de sensores físicos reais: os valores foram gerados para o exercício', 'Vidro, orgânico e materiais mistos', 'Itens sujos, molhados ou sobrepostos na esteira'])
+LER = [('Peso', 'g', 'Massa do item medida pela balança da esteira.'), ('Densidade', 'g/cm³', 'Massa por volume. Metal fica muito acima de papel e plástico.'), ('Condutividade', '0 a 100', 'Leitura de um sensor indutivo/condutivo. Alta só para metal.'), ('Opacidade', '%', 'Quanto da luz o item bloqueia. Ajuda a separar plástico (às vezes translúcido) de papel.'), ('Acurácia no teste', '%', 'Fração das amostras separadas para teste (nunca vistas no treino) que a árvore acertou.'), ('max_depth', 'níveis', 'Quantas perguntas seguidas a árvore pode fazer. Limitar evita que ela decore o treino.'), ('Barras de porcentagem', '%', 'Proporção de cada classe entre as amostras de treino que caíram na mesma folha. É a confiança da resposta.'), ('Caminho percorrido', 'perguntas', 'Cada linha é um nó: o valor medido, a comparação e o limite que a árvore aprendeu.'), ('Impureza de Gini', '0 a 1', 'Mistura de classes na folha. 0 = só uma classe ali (resposta segura); perto de 0,5 ou mais = folha misturada.'), ('Profundidade obtida / folhas', 'níveis · nós finais', 'Tamanho real da árvore treinada. Mais folhas = regras mais específicas.'), ('Acurácia treino × teste', '%', 'Se o treino chega a 100% e o teste cai, a árvore decorou (overfitting).')]
+AJUDA_ATRIBUTO = {'peso_g': 'Massa do item em gramas.', 'densidade_g_cm3': 'Massa por volume. Metal fica bem acima de 2 g/cm³.', 'condutividade': 'Sensor de condutividade: alto só para metal.', 'opacidade_pct': 'Quanto da luz o item bloqueia. Plástico pode ser translúcido.'}
 
 ESTILO = """
 <style>
@@ -50,6 +56,14 @@ ESTILO = """
 }
 
 .stApp { background: var(--fundo); }
+[data-testid="stExpander"] details { background: var(--superficie); border: 1px solid var(--borda); border-radius: 12px; }
+[data-testid="stExpander"] summary, [data-testid="stExpander"] summary p { color: var(--texto) !important; background: transparent !important; }
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] p,
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] li,
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] td { color: var(--texto-suave); line-height: 1.6; }
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] strong,
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] th { color: var(--texto); }
+[data-testid="stExpander"] th, [data-testid="stExpander"] td { border-color: var(--borda) !important; padding: 8px 10px !important; }
 #MainMenu, footer, header { visibility: hidden; }
 .block-container { padding: 2.2rem 3rem 4rem; max-width: 1240px; }
 
@@ -385,6 +399,8 @@ componente_html = f"""
 </script>
 """
 
+sobre.escopo(*ESCOPO)
+
 st.markdown('<div class="painel-titulo">Arraste até o sensor</div>', unsafe_allow_html=True)
 st.iframe(componente_html, height="content")
 
@@ -407,6 +423,7 @@ with coluna_entrada:
                 max_value=float(coluna.max()),
                 value=float(coluna.mean()),
                 step=0.1,
+                help=AJUDA_ATRIBUTO.get(atributo),
             )
 
 amostra = np.array([valores[atributo] for atributo in feature_names])
@@ -508,6 +525,8 @@ with st.expander("Profundidade vs. desempenho: por que max_depth=3"):
         """,
         unsafe_allow_html=True,
     )
+
+sobre.como_ler(LER)
 
 st.markdown(
     '<div class="rodape">Sensor de triagem · árvore de decisão · scikit-learn · Streamlit &nbsp;|&nbsp; '
